@@ -41,7 +41,6 @@ static unsigned int FPS = 0;
 static bool fullScreen = false;
 static Camera camera;
 static Mesh mesh;
-
 GLProgram * glProgram;
 GLProgram * toonProgram;
 GLProgram * toon_outlines_Program;
@@ -67,7 +66,6 @@ static bool renderShadowOnlyInInit = true;  //Render shadow only in the beginnin
 static bool perVertexAO = false;     //Ambient occlusion mode (true by default)
 static bool ggx = true;					//Cook-Torrance micro facet BRDF / GGX micro facet BRDF
 static bool filter=false;
-
 void printUsage () {
 	std::cerr << std::endl<< appTitle << std::endl
          << "Author: " << myName << std::endl << std::endl
@@ -82,7 +80,12 @@ void printUsage () {
 				 << " <f>: full screen mode"<< std::endl
 				 << " <w>: skeleton mode"<< std::endl
 				 << " <t>: active cartoon mode"<< std::endl
-                 << " <b>: display bounding boxes"<< std::endl
+        << " <b>: display bounding boxes"<< std::endl
+					<< " <c>: Geometric filter"<< std::endl
+					<< " <x>: Laplacian filter"<< std::endl
+        << " <v>: Grid implification"<< std::endl
+
+
          << " <q>, <esc>: Quit" << std::endl << std::endl;
 }
 void polar2Cartesian (float phi, float theta, float r, float & x, float & y, float & z) {
@@ -309,7 +312,6 @@ void renderScene () {
 			glUniform3fv (variableLocationPos, nb_light_active, lightPos);
 			glUniform3fv (variableLocationCol, nb_light_active, lightCol);
 			glProgram->setUniform1i("numberOfLightActive", nb_light_active);
-
 			glProgram->setUniform1i("ggx", ggx);
 			glProgram->setUniform1i("perVertexShadow", perVertexShadow);
 			glProgram->setUniform1i("perVertexAO", perVertexAO);
@@ -396,9 +398,14 @@ void key (unsigned char keyPressed, int x, int y) {
        }
        case 'c':{
         mesh.GeomFilter();
-        //mesh.simplify(16);
         break;
        }
+			 case 'v':{
+				 mesh.simplify(16);
+				 colorResponses.resize(4 * mesh.positions ().size ());
+	 		 	computePerVertexShadow(mesh);
+				 break;
+			 }
     default:
         printUsage ();
         break;

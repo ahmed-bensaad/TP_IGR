@@ -247,7 +247,7 @@ void Mesh::simplify(unsigned int resolution){
         if (y<ymin){
             ymin=y;
         }
-        else if (y>ymax){              
+        else if (y>ymax){
             ymax=y;
         }
         if (z<zmin){
@@ -257,7 +257,6 @@ void Mesh::simplify(unsigned int resolution){
             zmax=z;
         }
     }
-    std::cout<<"xmin: "<<xmin<<"\n"<<"ymin: "<<ymin<<"\n"<<"zmin: "<<zmin<<std::endl;
     Vec3f p1=Vec3f(xmin+0.1,ymax+0.1,zmin+0.1);
     Vec3f p2=Vec3f(xmax+0.1,ymin+0.1,zmax+0.1);
     Cube container= Cube(p1,p2);
@@ -265,7 +264,6 @@ void Mesh::simplify(unsigned int resolution){
     grid.computeRep(*this);
     Rep = grid.getRep();
     contained = grid.getContained();
-    std::cout<<"Grid generated"<<"\n"<<"Rep size: "<<Rep.size()<<"\n"<<"contained size: "<<grid.getContained().size()<<std::endl;
 
     //simplification
     for(unsigned int i=0;i<m_triangles.size();i++){
@@ -290,17 +288,13 @@ void Mesh::simplify(unsigned int resolution){
         }
         if(index_s1==index_s2 || index_s2==index_s3 || index_s1==index_s3){
             m_triangles.erase(m_triangles.begin()+i-1);
-            std::cout<<"triangle erased"<<std::endl;
         }
         else{
             m_triangles[i]=Triangle(index_s1,index_s2,index_s3);
-            std::cout<<"triangle changed"<<std::endl;
         }
     }
-    std::cout<<"Simplification done"<<"\n"<<"nbr of triangles"<<m_triangles.size()<<std::endl;
     m_positions.clear();
     m_positions.resize(Rep.size());
     m_positions=Rep;
     recomputeNormals();
-    std::cout<<"recompute normals done"<<std::endl;
 }
