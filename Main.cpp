@@ -39,7 +39,6 @@ static const string myName ("Ahmed Ben Saad");
 static GLint window;
 static unsigned int FPS = 0;
 static bool fullScreen = false;
-
 static Camera camera;
 static Mesh mesh;
 
@@ -93,23 +92,23 @@ void polar2Cartesian (float phi, float theta, float r, float & x, float & y, flo
   }
 
 void plan(){
-    std::vector<Vec3f> & positions = mesh.positions();   
-    std::vector<Triangle> & triangles = mesh.triangles();    
-    unsigned int N = positions.size();    
-    unsigned int n = 40;    
-    for (unsigned int i = 0 ; i < n ; i++){ 
-    for (unsigned int j = 0 ; j < n ; j++){  
+    std::vector<Vec3f> & positions = mesh.positions();
+    std::vector<Triangle> & triangles = mesh.triangles();
+    unsigned int N = positions.size();
+    unsigned int n = 40;
+    for (unsigned int i = 0 ; i < n ; i++){
+    for (unsigned int j = 0 ; j < n ; j++){
         double ui = (double)(i) / (double)(n-1);
         double uj = (double)(j) / (double)(n-1);
     positions.push_back(Vec3f(-2. + 4*uj,-1.0,-2. + 4*ui));
-         }    
-    }    
-    for (unsigned int j = 0; j < n-1 ; j++){    
+         }
+    }
+    for (unsigned int j = 0; j < n-1 ; j++){
         for (unsigned int i = 0; i < n-1; i++){
-            triangles.push_back(Triangle(N+j+n*i,N+j+n*(i+1),N+j+1+n*i)) ;    
-            triangles.push_back(Triangle(N+j+n*(i+1),N+j+1+n*(i+1),N+j+1+n*i)) ;        
-        }    
-}    
+            triangles.push_back(Triangle(N+j+n*i,N+j+n*(i+1),N+j+1+n*i)) ;
+            triangles.push_back(Triangle(N+j+n*(i+1),N+j+1+n*(i+1),N+j+1+n*i)) ;
+        }
+}
 mesh.recomputeNormals();
 }
 void computePerVertexAO (unsigned int numOfSamples, float radius, const Mesh& mesh){
@@ -178,7 +177,8 @@ void init (const char * modelFilename) {
 	mesh.loadOFF (modelFilename);
 	plan();			//adds a plane
     mesh.computeAdj();
-    mesh.computeTriadj();
+		mesh.compute_areas();
+		mesh.compute_cotangent_weights();
     colorResponses.resize (mesh.positions().size());
     camera.resize (DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);
 
@@ -221,7 +221,7 @@ void updatePerVertexColorResponse () {
 
         Vec3f light2_dir=light2.Position-mesh.positions()[i];
         float d2= light2_dir.squaredLength();
-        
+
 
         Vec3f cam;
         camera.getPos(cam);
@@ -239,7 +239,7 @@ void updatePerVertexColorResponse () {
 
 
         //colorResponses[i]=((float)(max<float>(dot(mesh.normals()[i],light0_dir),0.f)*(1.f/M_PI))*light0.Color)*(light0.intensity/d0) +((float)(max<float>(dot(mesh.normals()[i],light1_dir),0.f)*(1.f/M_PI))*light1.Color)*(light1.intensity/d1)+((float)(max<float>(dot(mesh.normals()[i],light2_dir),0.f)*(1.f/M_PI))*light2.Color)*(light2.intensity/d2) ;
-        
+
 
 
         Vec3f colorResponse0=(max<float>(dot(mesh.normals()[i],light0_dir),0.f)*light0.Color)*(light0.intensity/d0)*pow((dot(mesh.normals()[i],wh0)),3);
@@ -257,9 +257,10 @@ void updatePerVertexColorResponse () {
         float n_wi2=max(0.f,dot(mesh.normals()[i],light2_dir));
 
 
-        
-        
-    
+
+
+
+
 
 
        float D1=(1.f/(M_PI*pow(alpha,2)*pow(n_wh1,4)))*exp((pow(n_wh1,2)-1)/(pow(alpha,2)*pow(n_wh1,2)));
@@ -394,8 +395,8 @@ void key (unsigned char keyPressed, int x, int y) {
                 break;
        }
        case 'c':{
-        //mesh.GeomFilter();
-        mesh.simplify(16);
+        mesh.GeomFilter();
+        //mesh.simplify(16);
         break;
        }
     default:

@@ -12,12 +12,15 @@
 #pragma once
 #include <cmath>
 #include <vector>
+#include <map>
 #include "Vec3.h"
 #include "Triangle.h"
 #include "Grid.h"
 
 /// A Mesh class, storing a list of vertices and a list of triangles indexed over it.
 class Mesh {
+  std::vector< std::map< unsigned int , float > > cotangent_weight; // cotangent_weight[i][j] = le poids cotangent de l'arete orientee i->j
+  std::vector< float > vertex_area;
 public:
     inline Mesh () {}
     inline virtual ~Mesh () {}
@@ -28,6 +31,9 @@ public:
     inline const std::vector<Vec3f> & normals () const { return m_normals; }
     inline std::vector<Triangle> & triangles () { return m_triangles; }
     inline const std::vector<Triangle> & triangles () const { return m_triangles; }
+
+    void compute_cotangent_weights();
+    void compute_areas();
 
     /// Empty the positions, normals and triangles arrays.
     void clear ();

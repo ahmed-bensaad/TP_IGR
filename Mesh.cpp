@@ -1,12 +1,12 @@
 // --------------------------------------------------------------------------
 // Copyright(C) 2009-2016
 // Tamy Boubekeur
-// 
-// Permission granted to use this code only for teaching projects and 
+//
+// Permission granted to use this code only for teaching projects and
 // private practice.
 //
-// Do not distribute this code outside the teaching assignements.                                                                           
-// All rights reserved.                                                       
+// Do not distribute this code outside the teaching assignements.
+// All rights reserved.
 // --------------------------------------------------------------------------
 
 #include "Mesh.h"
@@ -29,7 +29,7 @@ void Mesh::clear () {
 void Mesh::loadOFF (const std::string & filename) {
     clear ();
 	ifstream in (filename.c_str ());
-    if (!in) 
+    if (!in)
         exit (1);
 	string offString;
     unsigned int sizeV, sizeT, tmp;
@@ -41,7 +41,7 @@ void Mesh::loadOFF (const std::string & filename) {
     int s;
     for (unsigned int i = 0; i < sizeT; i++) {
         in >> s;
-        for (unsigned int j = 0; j < 3; j++) 
+        for (unsigned int j = 0; j < 3; j++)
             in >> m_triangles[i][j];
     }
     in.close ();
@@ -109,30 +109,77 @@ void Mesh::computeAdj(){
         }
     }
 }
-void Mesh::computeTriadj(){
-        m_triadj.resize(m_positions.size());
-        for (unsigned int i=0;i<m_triangles.size();i++){
-            for(unsigned int j=0;j<3;j++){
-                m_triadj[m_triangles[i][j]].push_back(i);
 
-                }
 
-        }
+void Mesh::compute_cotangent_weights(){
+  cotangent_weight.clear();
+  cotangent_weight.resize( positions().size() );
+
+  for(unsigned int i=0;i<m_triangles.size();i++){
+    int i0 =m_triangles[i][0];
+    int i1 =m_triangles[i][1];
+    int i2 =m_triangles[i][2];
+
+    Vec3f v1=m_positions[i0];
+    Vec3f v2=m_positions[i1];
+    Vec3f v3=m_positions[i2];
+
+    Vec3f edge1= v2-v1;
+    Vec3f edge2= v3-v2;
+    Vec3f edge3= v1-v3;
+
+    float len1=edge1.length();
+    float len2=edge2.length();
+    float len3=edge3.length();
+
+    float cos1=-dot(edge1,edge3);
+    float cos2=-dot(edge1,edge2);
+    float cos3=-dot(edge2,edge3);
+
+    float sin1=cross(edge1,edge3).length();
+    float sin2=cross(edge1,edge2).length();
+    float sin3=cross(edge2,edge3).length();
+
+
+    cotangent_weight[i0][i1]+=0.5*cos3/sin3;
+    cotangent_weight[i1][i0]+=0.5*cos3/sin3;
+
+    cotangent_weight[i0][i2]+=0.5*cos2/sin2;
+    cotangent_weight[i2][i0]+=0.5*cos2/sin2;
+
+    cotangent_weight[i2][i1]+=0.5*cos1/sin1;
+    cotangent_weight[i1][i2]+=0.5*cos1/sin1;
+
+
+  }
+}
+
+void Mesh::compute_areas(){
+  vertex_area.clear();
+  vertex_area.resize( positions().size() );
+
+  for(unsigned int i=0;i<m_triangles.size();i++){
+    int i0 =m_triangles[i][0];
+    int i1 =m_triangles[i][1];
+    int i2 =m_triangles[i][2];
+
+    Vec3f v1=m_positions[i0];
+    Vec3f v2=m_positions[i1];
+    Vec3f v3=m_positions[i2];
+
+    Vec3f edge1= v2-v1;
+    Vec3f edge2= v3-v2;
+
+    float area=fabs(0.5*(cross(edge1,edge2)).length());
+    vertex_area[i0]+=area;
+    vertex_area[i1]+=area;
+    vertex_area[i2]+=area;
+  }
 
 }
+
 void Mesh::laplacianFilter(){
-    /*for (unsigned int i=0;i<m_positions.size();i++){
-        Vec3f vertex= m_positions[i];
-        Vec3f bary= Vec3f(0.0f,0.0f,0.0f);
-        std::vector<int> neighbours=getNeighbours(vertex);
-        int nb_vertex=neighbours.size();
-        for(const int it : neighbours){
-        //for(std::vector<Vec3f>::iterator it = neighbours.begin(); it != neighbours.end(); ++it){
-            bary+= m_positions[it];
-        }
-        bary=bary*(1.f/nb_vertex);
-        m_positions[i]=bary;
-    }*/
+
     for(unsigned int i=0;i<m_adj.size();i++){
         Vec3f bary=Vec3f(0.0f,0.0f,0.0f);
         for (unsigned int j=0;j<m_adj[i].size();j++){
@@ -146,57 +193,43 @@ void Mesh::laplacianFilter(){
 
     recomputeNormals();
 }
-Vec3f Mesh::computeTriangleContrib(Triangle t,Vec3f vi){
-    Vec3f a ,b=Vec3f(0.f,0.f,0.f);
-    Vec3f p1=m_positions[t[0]];
-    Vec3f p2=m_positions[t[1]];
-    Vec3f p3=m_positions[t[2]];
-    if (p1==vi){
-        a=p2;
-        b=p3;
-    }
-    else if (p2==vi){
-        a=p1;
-        b=p3;
-    }
-    else {
-        a=p1;
-        b=p2;
-    }
-    Vec3f edge1=vi-a;
-    Vec3f edge2=vi-b;
-    Vec3f edge3=a-b;
-    edge1.normalize();
-    edge2.normalize();
-    edge3.normalize();
-    float cos1= fabs(dot(edge1,edge3));
-    float cos2= fabs(dot(edge2,edge1));
-    float cotaij=cos1/sqrt(1.f-pow(cos1,2));
-    float cotbij=cos2/sqrt(1.f-pow(cos2,2));
-    return (edge1*cotbij+edge2*cotaij)/6;
-}
+
+
+
+
+
 void Mesh::GeomFilter(){
-   
-    Vec3f result=Vec3f(0.f,0.f,0.f);
+
+    /*Vec3f result=Vec3f(0.f,0.f,0.f);
     for(unsigned int j=0;j<m_positions.size();j++){
         Vec3f vertex=m_positions[j];
         for(unsigned int i=0;i<m_triadj[j].size();i++){
-            result+=computeTriangleContrib(m_triangles[i],vertex);
+            result+=computeTriangleContrib(m_triangles[m_triadj[j][i]],vertex);
         }
         m_positions[j]+=result;
     }
-    recomputeNormals();
+    recomputeNormals();*/
+
+    for(unsigned int i=0;i<m_positions.size();i++){
+    std::map<unsigned int,float> voisins_i=cotangent_weight[i];
+    for(std::map<unsigned int,float>::iterator it=voisins_i.begin();it!=voisins_i.end();++it){
+      int j =it->first;
+      float wij=it->second;
+      m_positions[i]+=vertex_area[i]*wij*(m_positions[j]-m_positions[i])/6;
+    }
+  }
+  recomputeNormals();
 
 }
 
 
 void Mesh::simplify(unsigned int resolution){
-    float xmin= -999.f;
-    float xmax= 999.f;
-    float ymin= -999.f;
-    float ymax= 999.f;
-    float zmin= -999.f;
-    float zmax= 999.f;    
+    float xmin= 999.f;
+    float xmax= -999.f;
+    float ymin= 999.f;
+    float ymax= -999.f;
+    float zmin= 999.f;
+    float zmax= -999.f;
     std::vector<std::vector<int>> contained;
     std::vector<Vec3f> Rep;
 
@@ -214,7 +247,7 @@ void Mesh::simplify(unsigned int resolution){
         if (y<ymin){
             ymin=y;
         }
-        else if (y>ymax){              //the problem is here, comparaisons give false results and the 999.999s are always conserved
+        else if (y>ymax){              
             ymax=y;
         }
         if (z<zmin){
@@ -225,16 +258,16 @@ void Mesh::simplify(unsigned int resolution){
         }
     }
     std::cout<<"xmin: "<<xmin<<"\n"<<"ymin: "<<ymin<<"\n"<<"zmin: "<<zmin<<std::endl;
-    Vec3f p1=Vec3f(xmin,ymax,zmin);
-    Vec3f p2=Vec3f(xmax,ymin,zmax);
+    Vec3f p1=Vec3f(xmin+0.1,ymax+0.1,zmin+0.1);
+    Vec3f p2=Vec3f(xmax+0.1,ymin+0.1,zmax+0.1);
     Cube container= Cube(p1,p2);
     Grid grid= Grid(container,resolution);
     grid.computeRep(*this);
     Rep = grid.getRep();
     contained = grid.getContained();
     std::cout<<"Grid generated"<<"\n"<<"Rep size: "<<Rep.size()<<"\n"<<"contained size: "<<grid.getContained().size()<<std::endl;
-    
-    //simplification    
+
+    //simplification
     for(unsigned int i=0;i<m_triangles.size();i++){
         Vec3f s1= m_positions[m_triangles[i][0]];
         Vec3f s2= m_positions[m_triangles[i][1]];
