@@ -45,7 +45,7 @@ GLProgram * glProgram;
 GLProgram * toonProgram;
 GLProgram * toon_outlines_Program;
 GLProgram * bvhProgram;
-
+ const char* filename;
 static std::vector<Vec4f> colorResponses;		// Cached per-vertex color response, updated at each frame
 static std::vector<LightSource> lightSources;
 
@@ -85,6 +85,7 @@ void printUsage () {
         << " <v>: Grid simplification 16x16x16"<< std::endl
         << " <n>: Grid simplification 32x32x32"<< std::endl
         << " <o>: Grid simplification 64x64x64"<< std::endl
+				<< " <r>: Restore original mesh"<< std::endl
 
          << " <q>, <esc>: Quit" << std::endl << std::endl;
 }
@@ -179,9 +180,6 @@ void init (const char * modelFilename) {
 
 	mesh.loadOFF (modelFilename);
 	plan();			//adds a plane
-    mesh.computeAdj();
-	mesh.compute_areas();
-	mesh.compute_cotangent_weights();
     colorResponses.resize (mesh.positions().size());
     camera.resize (DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);
 
@@ -395,7 +393,7 @@ void key (unsigned char keyPressed, int x, int y) {
                 }
                 break;
 	   case 'x':{
-                    mesh.laplacianFilter();
+                mesh.laplacianFilter();
                 break;
        }
        case 'c':{
@@ -423,6 +421,19 @@ void key (unsigned char keyPressed, int x, int y) {
             break;
 
        }
+			 case 'p':{
+					 mesh.subdivide();
+					 renderScene();
+					 break;
+
+			}
+			case 'r':{
+					init(filename);
+					plan();
+					renderScene();
+					break;
+
+		 }
 
     default:
         printUsage ();
@@ -465,6 +476,7 @@ int main (int argc, char ** argv) {
         printUsage ();
         exit (1);
     }
+		filename=(argc == 2 ? argv[1] : DEFAULT_MESH_FILE.c_str ());
     glutInit (&argc, argv);
     glutInitDisplayMode (GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
     glutInitWindowSize (DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);

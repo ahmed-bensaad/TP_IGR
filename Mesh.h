@@ -53,6 +53,7 @@ public:
     void GeomFilter();
     void simplify(unsigned int resolution);
     void setmesh();
+    void subdivide();
 
 private:
     std::vector<Vec3f> m_positions;

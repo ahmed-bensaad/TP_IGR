@@ -176,6 +176,7 @@ void Mesh::compute_areas(){
 }
 
 void Mesh::laplacianFilter(){
+  computeAdj();
 
     for(unsigned int i=0;i<m_adj.size();i++){
         Vec3f bary=Vec3f(0.0f,0.0f,0.0f);
@@ -196,16 +197,8 @@ void Mesh::laplacianFilter(){
 
 
 void Mesh::GeomFilter(){
-
-    /*Vec3f result=Vec3f(0.f,0.f,0.f);
-    for(unsigned int j=0;j<m_positions.size();j++){
-        Vec3f vertex=m_positions[j];
-        for(unsigned int i=0;i<m_triadj[j].size();i++){
-            result+=computeTriangleContrib(m_triangles[m_triadj[j][i]],vertex);
-        }
-        m_positions[j]+=result;
-    }
-    recomputeNormals();*/
+	compute_areas();
+	 compute_cotangent_weights();
 
     for(unsigned int i=0;i<m_positions.size();i++){
     std::map<unsigned int,float> voisins_i=cotangent_weight[i];
@@ -245,7 +238,7 @@ void Mesh::simplify(unsigned resolution) {
 
     this->resolution = resolution;
     std::vector<GridCell> gridCells(resolution * resolution * resolution);
-    
+
     this->x_segment = (x_max - x_min) / (resolution - 1);
     this->y_segment = (y_max - y_min) / (resolution - 1);
     this->z_segment = (z_max - z_min) / (resolution - 1);
@@ -288,16 +281,56 @@ unsigned int Mesh::getCell(unsigned int index) {
 void Mesh::setmesh(){
     m_positions.clear();
     m_triangles.clear();
-    
+
     m_positions.resize(simplify_positions.size());
     m_triangles.resize(simplify_triangles.size());
 
-    
+
         m_positions=simplify_positions;
         m_triangles=simplify_triangles;
         recomputeNormals();
-    
+
 }
 
+void Mesh::subdivide(){
+  std::vector<Vec3f> new_positions;
+  std::vector<Triangle> new_triangles;
+  std::vector< std::map< unsigned int , int > > new_indexes; // new_indexs[i][j]=index of the new vertex on the edje i->j (and j->i)
+  new_indexes.resize(m_positions.size()*m_positions.size());
+  for (unsigned int i=0;i<m_triangles.size();i++){
+    unsigned int index1=m_triangles[i][0];
+    unsigned int index2=m_triangles[i][1];
+    unsigned int index3=m_triangles[i][2];
 
+    Vec3f v1=m_positions[index1];
+    Vec3f v2=m_positions[index2];
+    Vec3f v3=m_positions[index3];
+    Vec3f e1=0.5f*(v1+v2);
+    Vec3f e2=0.5f*(v1+v3);
+    Vec3f e3=0.5f*(v3+v2);
 
+    unsigned int len=m_positions.size();
+
+    new_indexes[index1][index2]=len;
+    new_indexes[index2][index1]=len;
+
+    new_indexes[index1][index3]=len+1;
+    new_indexes[index3][index1]=len+1;
+
+    new_indexes[index3][index2]=len+2;
+    new_indexes[index2][index3]=len+2;
+
+    m_positions.push_back(e1);
+    m_positions.push_back(e2);
+    m_positions.push_back(e3);
+
+    new_triangles.push_back(Triangle(index1,len,len+1));
+    new_triangles.push_back(Triangle(len+1,len,len+2));
+    new_triangles.push_back(Triangle(len,index2,len+2));
+    new_triangles.push_back(Triangle(len+1,len+2,index3));
+  }
+  m_triangles.clear();
+  m_triangles=new_triangles;
+  recomputeNormals();
+
+}
