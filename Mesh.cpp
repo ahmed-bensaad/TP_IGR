@@ -128,9 +128,6 @@ void Mesh::compute_cotangent_weights(){
     Vec3f edge2= v3-v2;
     Vec3f edge3= v1-v3;
 
-    float len1=edge1.length();
-    float len2=edge2.length();
-    float len3=edge3.length();
 
     float cos1=-dot(edge1,edge3);
     float cos2=-dot(edge1,edge2);
@@ -222,79 +219,85 @@ void Mesh::GeomFilter(){
 
 }
 
-
-void Mesh::simplify(unsigned int resolution){
-    float xmin= 999.f;
-    float xmax= -999.f;
-    float ymin= 999.f;
-    float ymax= -999.f;
-    float zmin= 999.f;
-    float zmax= -999.f;
-    std::vector<std::vector<int>> contained;
-    std::vector<Vec3f> Rep;
-
-    // Generate the big Cube and the grid
-    for (unsigned int i=0;i<m_positions.size();i++){
-        float x=m_positions[i][0];
-        float y=m_positions[i][1];
-        float z=m_positions[i][2];
-        if (x<xmin){
-            xmin=x;
-        }
-        else if (x>xmax){
-            xmax=x;
-        }
-        if (y<ymin){
-            ymin=y;
-        }
-        else if (y>ymax){
-            ymax=y;
-        }
-        if (z<zmin){
-            zmin=z;
-        }
-        else if (z>zmax){
-            zmax=z;
-        }
+void Mesh::getBox() {
+    for (const auto position : m_positions) {
+        x_min = x_min > position[0] ? position[0] : x_min;
+        x_max = x_max < position[0] ? position[0] : x_max;
+        y_min = y_min > position[1] ? position[1] : y_min;
+        y_max = y_max < position[1] ? position[1] : y_max;
+        z_min = z_min > position[2] ? position[2] : z_min;
+        z_max = z_max < position[2] ? position[2] : z_max;
     }
-    Vec3f p1=Vec3f(xmin+0.1,ymax+0.1,zmin+0.1);
-    Vec3f p2=Vec3f(xmax+0.1,ymin+0.1,zmax+0.1);
-    Cube container= Cube(p1,p2);
-    Grid grid= Grid(container,resolution);
-    grid.computeRep(*this);
-    Rep = grid.getRep();
-    contained = grid.getContained();
 
-    //simplification
-    for(unsigned int i=0;i<m_triangles.size();i++){
-        Vec3f s1= m_positions[m_triangles[i][0]];
-        Vec3f s2= m_positions[m_triangles[i][1]];
-        Vec3f s3= m_positions[m_triangles[i][2]];
-        unsigned int index_s1;
-        unsigned int index_s2;
-        unsigned int index_s3;
-        for(unsigned int j=0;j<contained.size();j++){
-            for (unsigned int k=0;k<contained[j].size();k++){
-                if (m_positions[contained[j][k]]==s1){
-                    index_s1=j;
-                }
-                else if(m_positions[contained[j][k]]==s2){
-                    index_s2=j;
-                }
-                else if (m_positions[contained[j][k]]==s3){
-                    index_s3=j;
-                }
-            }
-        }
-        if(index_s1==index_s2 || index_s2==index_s3 || index_s1==index_s3){
-            m_triangles.erase(m_triangles.begin()+i-1);
-        }
-        else{
-            m_triangles[i]=Triangle(index_s1,index_s2,index_s3);
-        }
-    }
-    m_positions.clear();
-    m_positions.resize(Rep.size());
-    m_positions=Rep;
-    recomputeNormals();
+    x_min -= (x_max - x_min) / 1000.0;
+    x_max += (x_max - x_min) / 1001.0;
+    y_min -= (y_max - y_min) / 1000.0;
+    y_max += (y_max - y_min) / 1001.0;
+    z_min -= (z_max - z_min) / 1000.0;
+    z_max += (z_max - z_min) / 1001.0;
 }
+
+void Mesh::simplify(unsigned resolution) {
+    simplify_triangles.clear();
+    simplify_positions.clear();
+
+    getBox();
+
+    this->resolution = resolution;
+    std::vector<GridCell> gridCells(resolution * resolution * resolution);
+    
+    this->x_segment = (x_max - x_min) / (resolution - 1);
+    this->y_segment = (y_max - y_min) / (resolution - 1);
+    this->z_segment = (z_max - z_min) / (resolution - 1);
+
+
+    for (unsigned int i = 0; i < m_positions.size() ;i++) {
+        if(m_positions[i]==m_positions[i]){
+        int cellIndex = getCell(i);
+        gridCells[cellIndex].position += m_positions[i];
+        gridCells[cellIndex].weight++;
+    }
+    }
+    for (auto triangle : m_triangles) {
+        unsigned int p1_index = getCell(triangle[0]);
+        unsigned int p2_index = getCell(triangle[1]);
+        unsigned int p3_index = getCell(triangle[2]);
+
+        if (p1_index != p2_index && p2_index != p3_index && p3_index != p1_index) {
+            simplify_triangles.push_back(Triangle(p1_index, p2_index, p3_index));
+        }
+    }
+
+    for (auto& gcell : gridCells) {
+        simplify_positions.push_back(gcell.position / (gcell.weight*1.0));
+    }
+}
+
+
+unsigned int Mesh::getCell(unsigned int index) {
+    int x_index = (m_positions[index][0] - x_min) / x_segment;
+    int y_index = (m_positions[index][1] - y_min) / y_segment;
+    int z_index = (m_positions[index][2] - z_min) / z_segment;
+    int res = x_index * resolution * resolution + y_index * resolution + z_index;
+    if (abs(res) >= resolution * resolution * resolution) {
+        throw overflow_error(" Over range of grid");
+    }
+    return res;
+}
+
+void Mesh::setmesh(){
+    m_positions.clear();
+    m_triangles.clear();
+    
+    m_positions.resize(simplify_positions.size());
+    m_triangles.resize(simplify_triangles.size());
+
+    
+        m_positions=simplify_positions;
+        m_triangles=simplify_triangles;
+        recomputeNormals();
+    
+}
+
+
+

@@ -15,9 +15,9 @@ uniform vec3 lightPositions[8];
 uniform vec3 lightColors[8];
 uniform int numberOfLightActive;
 
-const vec3 matAlbedo = vec3 (0.8, 0.2, 0.3);
+const vec3 matAlbedo = vec3 (0.0, 0.0, 0.0);
 const float pi = 3.1415927;
-const float ambient_lighting_coefficient = 0.7;
+const float ambient_lighting_coefficient = 1.0;
 
 //coefficients for attenuation, aq the coefficient for d^2, al the coefficient for d, ac the constant coefficient, where d means the distance between the vertex and the light source
 const float ac = 0.0;
@@ -27,7 +27,7 @@ const float aq = 0.0;
 const float ks = 1.0;							//coefficient specular
 const float kd = pi;           //coefficient diffusion
 const float fd = kd / pi; 		//Lambert BRDF (diffusion); 			//Lambert BRDF (diffusion)
-const float s = 1.0;               //shininess
+const float s = 0.0;               //shininess
 
 uniform float alpha;         //roughness
 uniform float F0;						//Fresnel refraction index, dependent on material

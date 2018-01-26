@@ -78,13 +78,13 @@ void printUsage () {
          << " <drag>+<right button>: move model" << std::endl
          << " <drag>+<middle button>: zoom" << std::endl
 				 << " <f>: full screen mode"<< std::endl
-				 << " <w>: skeleton mode"<< std::endl
 				 << " <t>: active cartoon mode"<< std::endl
         << " <b>: display bounding boxes"<< std::endl
 					<< " <c>: Geometric filter"<< std::endl
 					<< " <x>: Laplacian filter"<< std::endl
-        << " <v>: Grid implification"<< std::endl
-
+        << " <v>: Grid simplification 16x16x16"<< std::endl
+        << " <n>: Grid simplification 32x32x32"<< std::endl
+        << " <o>: Grid simplification 64x64x64"<< std::endl
 
          << " <q>, <esc>: Quit" << std::endl << std::endl;
 }
@@ -174,14 +174,14 @@ void init (const char * modelFilename) {
     glEnableClientState (GL_NORMAL_ARRAY);
     glEnableClientState (GL_COLOR_ARRAY);
     glEnable (GL_NORMALIZE);
-		glLineWidth (2.0); // Set the width of edges in GL_LINE polygon mode
+	glLineWidth (2.0); // Set the width of edges in GL_LINE polygon mode
     glClearColor (0.0f, 0.0f, 0.0f, 1.0f); // Background color
 
 	mesh.loadOFF (modelFilename);
 	plan();			//adds a plane
     mesh.computeAdj();
-		mesh.compute_areas();
-		mesh.compute_cotangent_weights();
+	mesh.compute_areas();
+	mesh.compute_cotangent_weights();
     colorResponses.resize (mesh.positions().size());
     camera.resize (DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);
 
@@ -195,12 +195,14 @@ void init (const char * modelFilename) {
         cerr << e.msg () << endl;
     }
 
-		unsigned int deep_count1 = 0;
+        unsigned int deep_count1 = 0;
 		big_bvh = BVH::buildBVH( mesh.triangles(), mesh, deep_count1);
 
 		lightSources.resize(8);
-		lightSources[0] = LightSource(Vec3f(0.0f, 10.0f, -10.0f), Vec3f(1.0f, 2.0f, 3.0f));
+		lightSources[0] = LightSource(Vec3f(0.0f, 3.0f, -3.0f), Vec3f(1.0f, 0.5f, 0.2f));
 		lightSources[0].activeLightSource();
+        lightSources[1] = LightSource(Vec3f(-3.0f, 4.0f, 0.0f), Vec3f(0.0f, 1.0f, 1.0f));
+        lightSources[1].activeLightSource();
 		if(renderShadowOnlyInInit == true){
 			if(perVertexAO == true) computePerVertexAO(nb_Samples, radius_AO,mesh);
 			if(perVertexShadow == true) computePerVertexShadow(mesh);
@@ -400,12 +402,28 @@ void key (unsigned char keyPressed, int x, int y) {
         mesh.GeomFilter();
         break;
        }
-			 case 'v':{
-				 mesh.simplify(16);
-				 colorResponses.resize(4 * mesh.positions ().size ());
-	 		 	computePerVertexShadow(mesh);
-				 break;
-			 }
+	   case 'v':{
+            mesh.simplify(16);
+            mesh.setmesh();
+            renderScene();
+            break;
+
+       }
+        case 'n':{
+            mesh.simplify(32);
+            mesh.setmesh();
+            renderScene();
+            break;
+
+       }
+        case 'o':{
+            mesh.simplify(64);
+            mesh.setmesh();
+            renderScene();
+            break;
+
+       }
+
     default:
         printUsage ();
         break;
