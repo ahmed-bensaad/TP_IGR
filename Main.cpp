@@ -80,7 +80,9 @@ void printUsage () {
 		<< " <f>: full screen mode"<< std::endl
 		<< " <t>: active cartoon mode"<< std::endl
         << " <b>: display bounding boxes"<< std::endl
-		<< " <c>: Geometric filter"<< std::endl
+		<< " <1>: Geometric filter with alpha=0.1"<< std::endl
+        << " <2>: Geometric filter with alpha=0.5"<< std::endl
+        << " <3>: Geometric filter with alpha=1"<< std::endl
 		<< " <x>: Laplacian filter"<< std::endl
         << " <v>: Grid simplification 16x16x16"<< std::endl
         << " <n>: Grid simplification 32x32x32"<< std::endl
@@ -397,8 +399,16 @@ void key (unsigned char keyPressed, int x, int y) {
                 mesh.laplacianFilter();
                 break;
        }
-       case 'c':{
-        mesh.GeomFilter();
+       case '1':{
+        mesh.GeomFilter(0.1);
+        break;
+       }
+       case '2':{
+        mesh.GeomFilter(0.5);
+        break;
+       }
+       case '3':{
+        mesh.GeomFilter(1.0);
         break;
        }
 	   case 'v':{

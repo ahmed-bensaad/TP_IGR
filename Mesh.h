@@ -52,7 +52,7 @@ public:
     std::vector<int> getNeighbours(Vec3f vertex);
     void computeAdj();
     void computeTriadj();
-    void GeomFilter();
+    void GeomFilter(float alpha);
     void simplify(unsigned int resolution);
     void setmesh();
     void init_sub();

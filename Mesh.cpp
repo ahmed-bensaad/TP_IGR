@@ -209,7 +209,7 @@ void Mesh::laplacianFilter(){
 
 
 
-void Mesh::GeomFilter(){
+void Mesh::GeomFilter(float alpha){
 	compute_areas();
 	 compute_cotangent_weights();
 
@@ -218,7 +218,7 @@ void Mesh::GeomFilter(){
     for(std::map<unsigned int,float>::iterator it=voisins_i.begin();it!=voisins_i.end();++it){
       int j =it->first;
       float wij=it->second;
-      m_positions[i]+=vertex_area[i]*wij*(m_positions[j]-m_positions[i])/6;
+      m_positions[i]+=alpha*(vertex_area[i]*wij*(m_positions[j]-m_positions[i])/6);
     }
   }
   recomputeNormals();
@@ -403,7 +403,7 @@ void Mesh::subdivide(){
         new_triangles.push_back(Triangle(index_e1,index2,index_e3));
         new_triangles.push_back(Triangle(index_e2,index_e3,index3));
     }
-    
+
     m_positions.clear();
     m_positions=new_positions;
     m_triangles.clear();
