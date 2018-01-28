@@ -20,6 +20,8 @@
 class Mesh {
   std::vector< std::map< unsigned int , float > > cotangent_weight; // cotangent_weight[i][j] = le poids cotangent de l'arete orientee i->j
   std::vector< float > vertex_area;
+  std::vector< std::map< unsigned int , int > > new_indexes; // new_indexs[i][j]=index of the new vertex on the edje i->j (and j->i)
+
 public:
     inline Mesh () {}
     inline virtual ~Mesh () {}
@@ -53,6 +55,7 @@ public:
     void GeomFilter();
     void simplify(unsigned int resolution);
     void setmesh();
+    void init_sub();
     void subdivide();
 
 private:
@@ -61,6 +64,7 @@ private:
     std::vector<Triangle> m_triangles;
     std::vector<std::vector<int>> m_adj;
     std::vector<std::vector<int>>m_triadj;
+    std::vector<Vec3f> new_positions;
     Vec3f computeTriangleContrib(Triangle t,Vec3f vi);
 
 

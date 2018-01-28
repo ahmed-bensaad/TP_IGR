@@ -68,26 +68,27 @@ static bool ggx = true;					//Cook-Torrance micro facet BRDF / GGX micro facet B
 static bool filter=false;
 void printUsage () {
 	std::cerr << std::endl<< appTitle << std::endl
-         << "Author: " << myName << std::endl << std::endl
-         << "Usage: ./main [<file.off>]" << std::endl
-         << "Commands:" << std::endl
-         << "------------------" << std::endl
-         << " ?: Print help" << std::endl
-		 << " w: Toggle wireframe mode" << std::endl
-         << " <drag>+<left button>: rotate model" << std::endl
-         << " <drag>+<right button>: move model" << std::endl
-         << " <drag>+<middle button>: zoom" << std::endl
-				 << " <f>: full screen mode"<< std::endl
-				 << " <t>: active cartoon mode"<< std::endl
+        << "Author: " << myName << std::endl << std::endl
+        << "Usage: ./main [<file.off>]" << std::endl
+        << "Commands:" << std::endl
+        << "------------------" << std::endl
+        << " ?: Print help" << std::endl
+		<< " w: Toggle wireframe mode" << std::endl
+        << " <drag>+<left button>: rotate model" << std::endl
+        << " <drag>+<right button>: move model" << std::endl
+        << " <drag>+<middle button>: zoom" << std::endl
+		<< " <f>: full screen mode"<< std::endl
+		<< " <t>: active cartoon mode"<< std::endl
         << " <b>: display bounding boxes"<< std::endl
-					<< " <c>: Geometric filter"<< std::endl
-					<< " <x>: Laplacian filter"<< std::endl
+		<< " <c>: Geometric filter"<< std::endl
+		<< " <x>: Laplacian filter"<< std::endl
         << " <v>: Grid simplification 16x16x16"<< std::endl
         << " <n>: Grid simplification 32x32x32"<< std::endl
         << " <o>: Grid simplification 64x64x64"<< std::endl
-				<< " <r>: Restore original mesh"<< std::endl
+        << " <p>: Loop subdivision"<< std::endl
+        << " <r>: Restore original mesh"<< std::endl
 
-         << " <q>, <esc>: Quit" << std::endl << std::endl;
+        << " <q>, <esc>: Quit" << std::endl << std::endl;
 }
 void polar2Cartesian (float phi, float theta, float r, float & x, float & y, float & z) {
     x = r * sin (theta) * cos (phi);
@@ -179,7 +180,7 @@ void init (const char * modelFilename) {
     glClearColor (0.0f, 0.0f, 0.0f, 1.0f); // Background color
 
 	mesh.loadOFF (modelFilename);
-	plan();			//adds a plane
+	//plan();			//adds a plane
     colorResponses.resize (mesh.positions().size());
     camera.resize (DEFAULT_SCREENWIDTH, DEFAULT_SCREENHEIGHT);
 
@@ -429,7 +430,6 @@ void key (unsigned char keyPressed, int x, int y) {
 			}
 			case 'r':{
 					init(filename);
-					plan();
 					renderScene();
 					break;
 

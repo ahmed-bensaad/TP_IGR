@@ -101,6 +101,7 @@ vector<int> Mesh::getNeighbours(Vec3f vertex){
 }
 
 void Mesh::computeAdj(){
+    m_adj.clear();
     m_adj.resize(m_positions.size());
     for (unsigned int i=0;i<m_triangles.size();i++){
         for(unsigned int j=0;j<3;j++){
@@ -108,6 +109,18 @@ void Mesh::computeAdj(){
             m_adj[m_triangles[i][j]].push_back(m_triangles[i][(j+2)%3]);
         }
     }
+}
+void Mesh::computeTriadj(){
+        m_triadj.clear();
+        m_triadj.resize(m_positions.size());
+        for (unsigned int i=0;i<m_triangles.size();i++){
+            for(unsigned int j=0;j<3;j++){
+                m_triadj[m_triangles[i][j]].push_back(i);
+
+                }
+
+        }
+
 }
 
 
@@ -292,11 +305,18 @@ void Mesh::setmesh(){
 
 }
 
-void Mesh::subdivide(){
-  std::vector<Vec3f> new_positions;
-  std::vector<Triangle> new_triangles;
-  std::vector< std::map< unsigned int , int > > new_indexes; // new_indexs[i][j]=index of the new vertex on the edje i->j (and j->i)
-  new_indexes.resize(m_positions.size()*m_positions.size());
+void Mesh::init_sub(){
+  new_indexes.clear();
+  new_positions.clear();  
+  new_indexes.clear();
+
+  computeAdj();
+  computeTriadj();
+
+  new_indexes.resize(m_positions.size());
+  new_positions.resize(m_positions.size());
+
+
   for (unsigned int i=0;i<m_triangles.size();i++){
     unsigned int index1=m_triangles[i][0];
     unsigned int index2=m_triangles[i][1];
@@ -305,11 +325,9 @@ void Mesh::subdivide(){
     Vec3f v1=m_positions[index1];
     Vec3f v2=m_positions[index2];
     Vec3f v3=m_positions[index3];
-    Vec3f e1=0.5f*(v1+v2);
-    Vec3f e2=0.5f*(v1+v3);
-    Vec3f e3=0.5f*(v3+v2);
+    
 
-    unsigned int len=m_positions.size();
+    unsigned int len=new_positions.size();
 
     new_indexes[index1][index2]=len;
     new_indexes[index2][index1]=len;
@@ -320,17 +338,76 @@ void Mesh::subdivide(){
     new_indexes[index3][index2]=len+2;
     new_indexes[index2][index3]=len+2;
 
-    m_positions.push_back(e1);
-    m_positions.push_back(e2);
-    m_positions.push_back(e3);
 
-    new_triangles.push_back(Triangle(index1,len,len+1));
-    new_triangles.push_back(Triangle(len+1,len,len+2));
-    new_triangles.push_back(Triangle(len,index2,len+2));
-    new_triangles.push_back(Triangle(len+1,len+2,index3));
-  }
-  m_triangles.clear();
-  m_triangles=new_triangles;
-  recomputeNormals();
+    new_positions.push_back(Vec3f(0.f,0.f,0.f));
+    new_positions.push_back(Vec3f(0.f,0.f,0.f));
+    new_positions.push_back(Vec3f(0.f,0.f,0.f));
+
+    int n1=m_adj[index1].size();
+    int n2=m_adj[index2].size();
+    int n3=m_adj[index3].size();
+
+    int m1=m_triadj[index1].size();
+    int m2=m_triadj[index2].size();
+    int m3=m_triadj[index3].size();
+
+    float alpha_n1= (3.f/8)+pow(((3.f/8)+0.25*cos(2*M_PI/n1)),2);
+    float alpha_n2 = (3.f/8)+pow(((3.f/8)+0.25*cos(2*M_PI/n2)),2);
+    float alpha_n3 = (3.f/8)+pow(((3.f/8)+0.25*cos(2*M_PI/n3)),2);
+
+    Vec3f sum_n1 = Vec3f();
+    Vec3f sum_n2 = Vec3f();
+    Vec3f sum_n3 = Vec3f();
+
+    for (auto& n : m_adj[index1])
+        sum_n1 += m_positions[n];
+    
+    for (auto& n : m_adj[index2])
+        sum_n2 += m_positions[n];
+    
+    for (auto& n : m_adj[index3])
+        sum_n3 += m_positions[n];
+
+    
+    new_positions[index1]+=(1.f/m1)*(alpha_n1*v1 + ((1.f-alpha_n1)/n1)*sum_n1);
+    new_positions[index2]+=(1.f/m2)*(alpha_n2*v2 + ((1.f-alpha_n2)/n2)*sum_n2);
+    new_positions[index3]+=(1.f/m3)*(alpha_n3*v3 + ((1.f-alpha_n3)/n3)*sum_n3);
+
+    }
+}
+
+
+void Mesh::subdivide(){
+    std::vector<Triangle> new_triangles;
+    init_sub();
+    for (unsigned int i=0;i<m_triangles.size();i++){
+
+        unsigned int index1=m_triangles[i][0];
+        unsigned int index2=m_triangles[i][1];
+        unsigned int index3=m_triangles[i][2];
+
+        unsigned int index_e1 = new_indexes[index1][index2];
+        unsigned int index_e2 = new_indexes[index1][index3];
+        unsigned int index_e3 = new_indexes[index3][index2];
+
+        Vec3f v1=m_positions[index1];
+        Vec3f v2=m_positions[index2];
+        Vec3f v3=m_positions[index3];
+
+        new_positions[index_e1] += (3.f/16.f)*(v1+v2)+(1.f/8.f)*v3;
+        new_positions[index_e2] += (3.f/16.f)*(v1+v2)+(1.f/8.f)*v3;
+        new_positions[index_e3] += (3.f/16.f)*(v1+v2)+(1.f/8.f)*v3;
+
+        new_triangles.push_back(Triangle(index1,index_e1,index_e2));
+        new_triangles.push_back(Triangle(index_e2,index_e1,index_e3));
+        new_triangles.push_back(Triangle(index_e1,index2,index_e3));
+        new_triangles.push_back(Triangle(index_e2,index_e3,index3));
+    }
+    
+    m_positions.clear();
+    m_positions=new_positions;
+    m_triangles.clear();
+    m_triangles=new_triangles;
+    recomputeNormals();
 
 }
